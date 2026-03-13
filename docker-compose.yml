@@ -1,0 +1,89 @@
+services:
+
+  # ── Ollama ─────────────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_NUM_PARALLEL: 1       # only one request at a time
+      OLLAMA_MAX_LOADED_MODELS: 1  # evict model when idle to free RAM
+      OLLAMA_KEEP_ALIVE: 5m        # unload model after 5 min idle
+    volumes:
+      - ./data/ollama:/root/.ollama
+    # Uncomment the deploy section if you have an NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Model initialisation (runs once, then exits) ───────────────────────────
+  model-init:
+    image: ollama/ollama:latest
+    container_name: model-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - ./data/ollama:/root/.ollama
+    entrypoint: >
+      /bin/sh -c "
+        ollama pull ${DEFAULT_MODEL:-qwen2.5:7b} &&
+        echo 'Model ready.'
+      "
+    profiles: ["init"]   # run with: docker compose --profile init up model-init
+
+  # ── Agentic pipeline ───────────────────────────────────────────────────────
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - ./src:/app/src          # live-reload source during development
+      - ./config:/app/config
+      - ./data/workspace:/app/workspace
+    stdin_open: true
+    tty: true
+
+  # ── Open WebUI  (optional chat front-end) ─────────────────────────────────
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-changeme}
+    volumes:
+      - ./data/open-webui:/app/backend/data
+    profiles: ["ui"]   # run with: docker compose --profile ui up
+
+# All data is stored in ./data/ on the host — no anonymous volumes.
+# Delete ./data/ollama to force a fresh model download.
+# Delete ./data/workspace to reset the agent workspace.

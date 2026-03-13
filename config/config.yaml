@@ -1,0 +1,54 @@
+# ── LLM provider ─────────────────────────────────────────────────────────────
+llm:
+  # "ollama" | "openai" | "anthropic" | "gemini"
+  provider: ollama
+  model: qwen2.5:1.5b           # override with DEFAULT_MODEL env var
+  temperature: 0.7
+  max_tokens: 4096
+  # For Ollama the base_url comes from OLLAMA_HOST env var.
+  # For cloud providers set the matching env var in .env:
+  #   OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
+
+# ── Agent behaviour ───────────────────────────────────────────────────────────
+agent:
+  max_iterations: 20           # hard stop to prevent infinite loops
+  verbose: true                # print Thought / Action / Observation to stdout
+  system_prompt: |
+    You are a helpful AI assistant with access to a set of tools.
+    Use the ReAct pattern: reason step-by-step before every action.
+
+    Format your responses EXACTLY as:
+
+    Thought: <your reasoning>
+    Action: <tool_name>
+    Action Input: <the input to the tool, as a JSON object>
+
+    When you have a final answer write:
+
+    Thought: I have all the information needed.
+    Final Answer: <your answer>
+
+    Available tools:
+    {tool_descriptions}
+
+# ── Tool toggles ──────────────────────────────────────────────────────────────
+tools:
+  shell:
+    enabled: true
+    timeout: 30               # seconds
+    allowed_commands: []      # empty list = allow all; or list specific commands
+  python_eval:
+    enabled: true
+    timeout: 10
+  file_read:
+    enabled: true
+    base_dir: /app/workspace  # restrict file access to this directory
+  file_write:
+    enabled: true
+    base_dir: /app/workspace
+  web_fetch:
+    enabled: true
+    timeout: 15
+    max_content_length: 50000  # characters returned to the agent
+  calculator:
+    enabled: true

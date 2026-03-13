@@ -1,0 +1,14 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+requests>=2.31.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+colorama>=0.4.6
+rich>=13.0.0
+
+# ── LLM clients ──────────────────────────────────────────────────────────────
+ollama>=0.3.0           # official Ollama Python SDK
+
+# Optional: uncomment when switching to cloud providers
+# openai>=1.0.0         # OpenAI / Azure OpenAI / any OpenAI-compatible API
+# anthropic>=0.25.0     # Anthropic Claude
+# google-generativeai   # Google Gemini
