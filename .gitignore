@@ -1,1 +1,11 @@
-.venv
+# Data directories — models and workspace, persisted on the host
+data/
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Env file with secrets
+.env
