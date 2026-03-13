@@ -1,5 +1,6 @@
-# Data directories — models and workspace, persisted on the host
-data/
+
+# let's keep the directory structure in place, but ignore all files except .gitkeep
+data/*
 !data/.gitkeep
 
 # Python
