@@ -8,6 +8,9 @@ rich>=13.0.0
 # ── LLM clients ──────────────────────────────────────────────────────────────
 ollama>=0.3.0           # official Ollama Python SDK
 
+# ── Integrations ─────────────────────────────────────────────────────────────
+datadog-api-client>=2.25.0  # Datadog monitors & dashboards tools
+
 # Optional: uncomment when switching to cloud providers
 # openai>=1.0.0         # OpenAI / Azure OpenAI / any OpenAI-compatible API
 # anthropic>=0.25.0     # Anthropic Claude

@@ -2,7 +2,7 @@
 llm:
   # "ollama" | "openai" | "anthropic" | "gemini"
   provider: ollama
-  model: phi4-mini:3.8b           # override with DEFAULT_MODEL env var
+  model: qwen2.5:7b               # override with DEFAULT_MODEL env var
   temperature: 0.7
   max_tokens: 4096
   # For Ollama the base_url comes from OLLAMA_HOST env var.
@@ -51,4 +51,11 @@ tools:
     timeout: 15
     max_content_length: 50000  # characters returned to the agent
   calculator:
+    enabled: true
+  datadog_monitors:
+    enabled: true
+    # DD_API_KEY, DD_APP_KEY, DD_SITE must be set in .env
+  datadog_dashboards:
+    enabled: true
+  datadog_services:
     enabled: true
