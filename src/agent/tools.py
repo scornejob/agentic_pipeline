@@ -248,3 +248,8 @@ def _web_fetch(input_str: str) -> str:
         return text[:max_length]
     except requests.exceptions.RequestException as exc:
         return f"Error fetching URL: {exc}"
+
+
+# ── Optional integrations (register additional tools) ─────────────────────────
+# Imported for side-effects: each module uses @tool() to self-register.
+from src.agent import datadog_tools as _datadog_tools  # noqa: E402, F401

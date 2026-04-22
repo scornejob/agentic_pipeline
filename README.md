@@ -18,6 +18,7 @@ src/
 └── agent/
     ├── pipeline.py          — ReAct loop
     ├── tools.py             — tool registry + built-in tools
+    ├── datadog_tools.py     — Datadog monitors & dashboards tools
     └── memory.py            — rolling message history
 
 config/
@@ -119,8 +120,32 @@ Supported providers: `ollama` · `openai` (also works for Azure, Groq, Together 
 | `file_read` | Read a file from `/app/workspace` |
 | `file_write` | Write a file to `/app/workspace` |
 | `web_fetch` | Fetch and extract text from a URL |
+| `datadog_monitors` | List/filter Datadog monitors by status, tags, or name |
+| `datadog_dashboards` | List Datadog dashboards or inspect a specific dashboard's widgets |
+| `datadog_services` | List and filter services from the Datadog Service Catalog |
 
 Toggle any tool in `config/config.yaml` under `tools:`.
+
+### Datadog tools setup
+
+1. Add your credentials to `.env`:
+
+   ```
+   DD_API_KEY=your_api_key
+   DD_APP_KEY=your_application_key
+   DD_SITE=datadoghq.com   # change if on EU or other regional site
+   ```
+
+2. Rebuild the agent container:
+
+   ```bash
+   docker compose up -d --build agent
+   ```
+
+Example prompts:
+- *"Show me all alerting monitors tagged env:prod"*
+- *"List dashboards related to kubernetes"*
+- *"Get the widgets in dashboard abc-123-xyz"*
 
 ## Adding custom tools
 

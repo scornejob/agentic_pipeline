@@ -7,6 +7,7 @@ Usage (inside container):
 """
 from __future__ import annotations
 
+import os
 import sys
 
 from rich.console import Console
@@ -46,7 +47,7 @@ def main() -> None:
     pipeline = build_pipeline(cfg)
 
     llm_cfg = cfg.get("llm", {})
-    model = llm_cfg.get("model", "?")
+    model = os.environ.get("DEFAULT_MODEL") or llm_cfg.get("model", "?")
     provider = llm_cfg.get("provider", "ollama")
 
     console.print(f"\n[bold green]Agentic Pipeline[/bold green]  "
