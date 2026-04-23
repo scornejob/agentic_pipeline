@@ -17,6 +17,7 @@ from typing import Iterator
 from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.text import Text
 
 from src.agent.memory import Memory
@@ -115,7 +116,20 @@ class AgentPipeline:
             console.rule(f"[bold]Task: {escape(task[:80])}[/bold]")
 
         for iteration in range(1, self.max_iterations + 1):
-            resp = self.llm.chat(self.memory.get_messages())
+            # ── Show spinner while the LLM is thinking ────────────────────────
+            if self.verbose:
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn(f"[dim]Step {iteration}/{self.max_iterations}  thinking…[/dim]"),
+                    BarColumn(bar_width=20),
+                    TaskProgressColumn(),
+                    transient=True,
+                    console=console,
+                ) as progress:
+                    progress.add_task("", total=self.max_iterations, completed=iteration - 1)
+                    resp = self.llm.chat(self.memory.get_messages())
+            else:
+                resp = self.llm.chat(self.memory.get_messages())
             raw_text = resp.content
 
             self.memory.add("assistant", raw_text)
@@ -133,7 +147,17 @@ class AgentPipeline:
                 continue
 
             # Execute tool
-            observation = run_tool(step.action, step.action_input, self.tools)
+            if self.verbose:
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn(f"[dim]Running tool [bold yellow]{escape(step.action)}[/bold yellow]…[/dim]"),
+                    transient=True,
+                    console=console,
+                ) as progress:
+                    progress.add_task("", total=None)
+                    observation = run_tool(step.action, step.action_input, self.tools)
+            else:
+                observation = run_tool(step.action, step.action_input, self.tools)
             self._print_observation(observation)
 
             # Feed observation back as a user message (standard ReAct trick)
