@@ -60,10 +60,17 @@ services:
       - .env
     environment:
       OLLAMA_HOST: http://ollama:11434
+      # Pass AWS credentials from the host shell (e.g. set by Granted / assume-role).
+      # Docker reads these from the invoking shell; unset vars are silently ignored.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-central-1}
     volumes:
       - ./src:/app/src          # live-reload source during development
       - ./config:/app/config
       - ./data/workspace:/app/workspace
+      - ${HOME}/.aws:/root/.aws:ro  # Granted / AWS CLI credentials (read-only)
     stdin_open: true
     tty: true
 

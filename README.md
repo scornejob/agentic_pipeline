@@ -123,6 +123,7 @@ Supported providers: `ollama` · `openai` (also works for Azure, Groq, Together 
 | `datadog_monitors` | List/filter Datadog monitors by status, tags, or name |
 | `datadog_dashboards` | List Datadog dashboards or inspect a specific dashboard's widgets |
 | `datadog_services` | List and filter services from the Datadog Service Catalog |
+| `cloudwatch_alarms` | List and filter AWS CloudWatch alarms by state, name prefix, or namespace |
 
 Toggle any tool in `config/config.yaml` under `tools:`.
 
@@ -146,6 +147,27 @@ Example prompts:
 - *"Show me all alerting monitors tagged env:prod"*
 - *"List dashboards related to kubernetes"*
 - *"Get the widgets in dashboard abc-123-xyz"*
+
+### AWS CloudWatch setup
+
+1. Add credentials to `.env` (or use `~/.aws/credentials` / an IAM role):
+
+   ```
+   AWS_ACCESS_KEY_ID=AKIA...
+   AWS_SECRET_ACCESS_KEY=...
+   AWS_DEFAULT_REGION=eu-central-1
+   ```
+
+2. Rebuild the agent container (boto3 is a new dependency):
+
+   ```bash
+   docker compose up -d --build agent
+   ```
+
+Example prompts:
+- *"Show me all ALARM state alarms in eu-central-1"*
+- *"List CloudWatch alarms with prefix 'prod-' in the AWS/RDS namespace"*
+- *"Are there any INSUFFICIENT_DATA alarms in eu--1?"*
 
 ## Adding custom tools
 
