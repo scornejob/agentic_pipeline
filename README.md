@@ -187,6 +187,17 @@ def _my_tool(input_str: str) -> str:
 
 The agent will discover it automatically on the next run.
 
+## Memory requirements
+
+The `ollama` service in [docker-compose.yml](docker-compose.yml) reserves **20 GB** and is capped at **28 GB** to fit larger models like `qwen2.5:32b` (~20 GB at Q4 quantization) plus context.
+
+These container-side limits only work if the Docker host can actually provide that RAM:
+
+- **Docker Desktop (Mac / Windows):** open **Settings → Resources → Memory** and raise the VM limit to **at least 28 GB** (32 GB recommended for headroom). Apply & Restart. Without this, the container will be OOM-killed when the model loads.
+- **Linux:** containers use host RAM directly — just make sure the machine has enough free memory.
+
+For smaller models (e.g. `qwen2.5:7b` ≈ 5 GB), you can lower the `deploy.resources` values accordingly.
+
 ## GPU support
 
 Uncomment the `deploy` block in [docker-compose.yml](docker-compose.yml) under the `ollama` service:

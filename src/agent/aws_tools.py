@@ -11,7 +11,6 @@ Optional environment variables:
 """
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
 
@@ -73,14 +72,14 @@ def _alarm_summary(alarm: dict) -> dict:
     name="cloudwatch_alarms",
     description=(
         "List AWS CloudWatch alarms. Filter by state, name prefix, or namespace. "
-        "Returns alarm name, state, triggering metric, and reason."
+        "Returns a plain text list of alarm names, states, and reasons — ready to use directly in the Final Answer."
     ),
     usage=(
-        'Action Input: {"state": "ALARM", "prefix": "", "namespace": "", "region": "eu-central-1"}\n'
+        'Action Input: {"state": "ALARM", "region": "eu-central-1"}\n'
         '  state:     ALARM | OK | INSUFFICIENT_DATA | all  (default: all)\n'
-        '  prefix:    filter alarms whose name starts with this string  (optional, leave empty for all)\n'
-        '  namespace: filter by CloudWatch metric namespace, e.g. AWS/RDS, AWS/EC2, AWS/Lambda  (optional, leave empty for all)\n'
-        '  region:    AWS region                                        (default: AWS_DEFAULT_REGION or us-east-1)\n'
+        '  prefix:    filter alarms whose name starts with this string  (optional)\n'
+        '  namespace: filter by CloudWatch metric namespace, e.g. AWS/RDS, AWS/EC2  (optional)\n'
+        '  region:    AWS region                                        (default: AWS_DEFAULT_REGION or eu-central-1)\n'
         '  limit:     max results to return                             (default: 50)'
     ),
 )
@@ -135,13 +134,24 @@ def _cloudwatch_alarms(input_str: str) -> str:
                 f"(state={state_filter!r}, prefix={prefix!r}, namespace={namespace_filter!r}, region={region!r})."
             )
 
-        summary = {
-            "total_returned": len(results),
-            "truncated_at_limit": len(results) >= limit,
-            "filters": {"state": state_filter, "prefix": prefix, "namespace": namespace_filter, "region": region},
-            "alarms": results,
-        }
-        return json.dumps(summary, indent=2)
+        truncated = len(results) >= limit
+        header = f"{len(results)} alarm(s) found"
+        if state_filter != "ALL":
+            header += f" in state {state_filter}"
+        if truncated:
+            header += f" (truncated at limit={limit})"
+
+        lines = [header, ""]
+        for i, a in enumerate(results, 1):
+            reason_short = a["reason"][:120].replace("\n", " ") if a["reason"] else ""
+            line = f"{i}. {a['name']} [{a['state']}]"
+            if a["metric"]:
+                line += f" — {a['metric']}"
+            if reason_short:
+                line += f" — {reason_short}"
+            lines.append(line)
+
+        return "\n".join(lines)
 
     except Exception as exc:
         return f"AWS CloudWatch error: {exc}"
