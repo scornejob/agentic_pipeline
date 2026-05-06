@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass
 from typing import Iterator
 
@@ -21,7 +22,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.text import Text
 
 from src.agent.memory import Memory
-from src.agent.tools import Tool, run_tool, tool_descriptions
+from src.agent.tools import Tool, get_pipeline_flags, run_tool, tool_descriptions
 from src.llm.provider import LLMProvider
 
 console = Console()
@@ -86,7 +87,7 @@ class AgentPipeline:
         desc = tool_descriptions(self.tools)
         return self.system_prompt_template.format(tool_descriptions=desc)
 
-    def _print_step(self, step: Step, iteration: int) -> None:
+    def _print_step(self, step: Step, iteration: int, elapsed: float | None = None) -> None:
         if not self.verbose:
             return
         parts = []
@@ -98,25 +99,34 @@ class AgentPipeline:
             parts.append(f"[bold yellow]Action Input:[/bold yellow] {escape(step.action_input)}")
         if step.final_answer:
             parts.append(f"[bold green]Final Answer:[/bold green] {escape(step.final_answer)}")
-        console.print(Panel("\n".join(parts), title=f"[dim]Step {iteration}[/dim]", border_style="dim"))
+        title = f"[dim]Step {iteration}"
+        if elapsed is not None:
+            title += f" · LLM {elapsed:.2f}s"
+        title += "[/dim]"
+        console.print(Panel("\n".join(parts), title=title, border_style="dim"))
 
     def _print_observation(self, obs: str) -> None:
-        if not self.verbose:
+        flags = get_pipeline_flags()
+        if not (self.verbose or flags["show_observation"] or flags["debug_raw"]):
             return
-        console.print(Panel(escape(obs[:500] + ("…" if len(obs) > 500 else "")),
-                            title="[dim]Observation[/dim]", border_style="dim magenta"))
+        full = flags["show_observation"] or flags["debug_raw"]
+        text = obs if full else obs[:500] + ("…" if len(obs) > 500 else "")
+        console.print(Panel(escape(text), title="[dim]Observation[/dim]", border_style="dim magenta"))
 
     def run(self, task: str) -> str:
         """Run the ReAct loop for a given task and return the final answer."""
         self.memory.clear_except_system()
         self.memory.set_system(self._build_system_prompt())
-        self.memory.add("user", task)
+        style = get_pipeline_flags().get("response_style", "")
+        user_message = f"{task}\n\n[Format instruction: {style}]" if style else task
+        self.memory.add("user", user_message)
 
         if self.verbose:
             console.rule(f"[bold]Task: {escape(task[:80])}[/bold]")
 
         for iteration in range(1, self.max_iterations + 1):
             # ── Show spinner while the LLM is thinking ────────────────────────
+            t0 = time.perf_counter()
             if self.verbose:
                 with Progress(
                     SpinnerColumn(),
@@ -130,12 +140,16 @@ class AgentPipeline:
                     resp = self.llm.chat(self.memory.get_messages())
             else:
                 resp = self.llm.chat(self.memory.get_messages())
+            elapsed = time.perf_counter() - t0
             raw_text = resp.content
+
+            if get_pipeline_flags()["debug_raw"]:
+                console.print(Panel(escape(raw_text), title="[dim]Raw LLM response[/dim]", border_style="dim red"))
 
             self.memory.add("assistant", raw_text)
 
             step = _parse_step(raw_text)
-            self._print_step(step, iteration)
+            self._print_step(step, iteration, elapsed=elapsed)
 
             # Finished
             if step.final_answer:

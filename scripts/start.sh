@@ -10,7 +10,10 @@ source "$(dirname "$0")/../.env" 2>/dev/null || true
 DEFAULT_MODEL="${DEFAULT_MODEL:-qwen2.5:7b}"
 
 echo "==> Starting Ollama + Agent services..."
-docker compose up -d ollama agent
+# --force-recreate ensures AWS env vars from the current shell (e.g. set by Granted)
+# are injected fresh into the agent container on every start.
+docker compose up -d ollama
+docker compose up -d --force-recreate agent
 
 echo "==> Waiting for Ollama to be healthy..."
 until docker compose exec ollama ollama list &>/dev/null; do

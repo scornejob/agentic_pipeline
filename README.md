@@ -123,6 +123,7 @@ Supported providers: `ollama` · `openai` (also works for Azure, Groq, Together 
 | `datadog_monitors` | List/filter Datadog monitors by status, tags, or name |
 | `datadog_dashboards` | List Datadog dashboards or inspect a specific dashboard's widgets |
 | `datadog_services` | List and filter services from the Datadog Service Catalog |
+| `cloudwatch_alarms` | List and filter AWS CloudWatch alarms by state, name prefix, or namespace |
 
 Toggle any tool in `config/config.yaml` under `tools:`.
 
@@ -147,6 +148,27 @@ Example prompts:
 - *"List dashboards related to kubernetes"*
 - *"Get the widgets in dashboard abc-123-xyz"*
 
+### AWS CloudWatch setup
+
+1. Add credentials to `.env` (or use `~/.aws/credentials` / an IAM role):
+
+   ```
+   AWS_ACCESS_KEY_ID=AKIA...
+   AWS_SECRET_ACCESS_KEY=...
+   AWS_DEFAULT_REGION=eu-central-1
+   ```
+
+2. Rebuild the agent container (boto3 is a new dependency):
+
+   ```bash
+   docker compose up -d --build agent
+   ```
+
+Example prompts:
+- *"Show me all ALARM state alarms in eu-central-1"*
+- *"List CloudWatch alarms with prefix 'prod-' in the AWS/RDS namespace"*
+- *"Are there any INSUFFICIENT_DATA alarms in eu--1?"*
+
 ## Adding custom tools
 
 Register a new tool in [src/agent/tools.py](src/agent/tools.py) using the `@tool` decorator:
@@ -164,6 +186,17 @@ def _my_tool(input_str: str) -> str:
 ```
 
 The agent will discover it automatically on the next run.
+
+## Memory requirements
+
+The `ollama` service in [docker-compose.yml](docker-compose.yml) reserves **20 GB** and is capped at **28 GB** to fit larger models like `qwen2.5:32b` (~20 GB at Q4 quantization) plus context.
+
+These container-side limits only work if the Docker host can actually provide that RAM:
+
+- **Docker Desktop (Mac / Windows):** open **Settings → Resources → Memory** and raise the VM limit to **at least 28 GB** (32 GB recommended for headroom). Apply & Restart. Without this, the container will be OOM-killed when the model loads.
+- **Linux:** containers use host RAM directly — just make sure the machine has enough free memory.
+
+For smaller models (e.g. `qwen2.5:7b` ≈ 5 GB), you can lower the `deploy.resources` values accordingly.
 
 ## GPU support
 

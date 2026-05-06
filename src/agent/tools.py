@@ -34,6 +34,13 @@ class Tool:
 
 _REGISTRY: dict[str, Tool] = {}
 
+# Mutable flags that tools can set to influence pipeline behaviour at runtime.
+_PIPELINE_FLAGS: dict = {"debug_raw": False, "show_observation": False, "response_style": ""}
+
+
+def get_pipeline_flags() -> dict[str, bool]:
+    return _PIPELINE_FLAGS
+
 
 def tool(name: str, description: str, usage: str):
     """Decorator that registers a function as a named tool."""
@@ -250,6 +257,55 @@ def _web_fetch(input_str: str) -> str:
         return f"Error fetching URL: {exc}"
 
 
+@tool(
+    name="set_raw_mode",
+    description="Toggle whether the pipeline prints the raw LLM response before parsing. Useful for debugging.",
+    usage='Action Input: {"enabled": true}',
+)
+def _set_raw_mode(input_str: str) -> str:
+    data = _parse_json_input(input_str)
+    enabled = data.get("enabled", True)
+    if isinstance(enabled, str):
+        enabled = enabled.lower() not in ("false", "0", "off", "no")
+    _PIPELINE_FLAGS["debug_raw"] = bool(enabled)
+    state = "enabled" if _PIPELINE_FLAGS["debug_raw"] else "disabled"
+    return f"Raw response mode {state}."
+
+
+@tool(
+    name="set_observation_mode",
+    description="Toggle whether tool observations are printed in full (untruncated) to the console.",
+    usage='Action Input: {"enabled": true}',
+)
+def _set_observation_mode(input_str: str) -> str:
+    data = _parse_json_input(input_str)
+    enabled = data.get("enabled", True)
+    if isinstance(enabled, str):
+        enabled = enabled.lower() not in ("false", "0", "off", "no")
+    _PIPELINE_FLAGS["show_observation"] = bool(enabled)
+    state = "enabled" if _PIPELINE_FLAGS["show_observation"] else "disabled"
+    return f"Full observation mode {state}."
+
+
+@tool(
+    name="set_response_style",
+    description=(
+        "Set a persistent instruction that constrains how the Final Answer is formatted. "
+        "Use this when the user asks for a specific output format (e.g. plain list, no recommendations, JSON only). "
+        "Pass an empty string to clear the style."
+    ),
+    usage='Action Input: {"style": "Return only a plain list. No recommendations, explanations, or extra context."}',
+)
+def _set_response_style(input_str: str) -> str:
+    data = _parse_json_input(input_str)
+    style = data.get("style", "").strip()
+    _PIPELINE_FLAGS["response_style"] = style
+    if style:
+        return f"Response style set: {style}"
+    return "Response style cleared."
+
+
 # ── Optional integrations (register additional tools) ─────────────────────────
 # Imported for side-effects: each module uses @tool() to self-register.
 from src.agent import datadog_tools as _datadog_tools  # noqa: E402, F401
+from src.agent import aws_tools as _aws_tools  # noqa: E402, F401

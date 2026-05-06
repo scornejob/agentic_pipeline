@@ -59,3 +59,6 @@ tools:
     enabled: true
   datadog_services:
     enabled: true
+  cloudwatch_alarms:
+    enabled: true
+    # AWS credentials come from env vars or ~/.aws/credentials (see .env.example)
